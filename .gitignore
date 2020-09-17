@@ -81,6 +81,7 @@ target/
 /src/models/cache_dir/
 /src/models/runs/
 /src/models/output/
+/src/models/timoshenko_method/runs/
 # Mac OS-specific storage files
 .DS_Store
 
