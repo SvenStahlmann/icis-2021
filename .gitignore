@@ -78,6 +78,9 @@ target/
 # exclude data from source control by default
 /data/
 /models/
+/src/models/cache_dir/
+/src/models/runs/
+/src/models/output/
 # Mac OS-specific storage files
 .DS_Store
 
