@@ -2,10 +2,20 @@
 import click
 import logging
 from pathlib import Path
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 import pandas as pd
-import re
 
+def kfoldize(df, n_splits=10):
+    kf = KFold(n_splits=n_splits, shuffle=True)
+    train_folds = []
+    test_folds = []
+    for train_index, test_index in kf.split(df):
+        train_df = df.iloc[train_index]
+        test_df = df.iloc[test_index]
+
+        train_folds.append(train_df)
+        test_folds.append(test_df)
+    return train_folds, test_folds
 
 def load_in_cat_data(in_category_data_path):
     # load in category data
@@ -21,8 +31,9 @@ def load_in_cat_data(in_category_data_path):
 
     # split into train in test in category
     train_in_cat, test_in_cat = train_test_split(in_cat_data, test_size=0.1)
+    train_folds, test_folds = kfoldize(train_in_cat)
 
-    return train_in_cat, test_in_cat
+    return train_folds,test_folds, test_in_cat
 
 def load_out_of_cat_data(out_category_data_path):
     out_of_cat_data = pd.read_csv(out_category_data_path, index_col=False)
@@ -57,12 +68,16 @@ def main(in_category_data_path, out_category_data_path, output_path):
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
 
-    train_in_cat, test_in_cat = load_in_cat_data(in_category_data_path)
+    #generate training/test folds and test data
+    train_folds,test_folds, test_in_cat = load_in_cat_data(in_category_data_path)
 
     # load out of category data
     out_of_cat_data = load_out_of_cat_data(out_category_data_path)
+    for i, (train, test) in enumerate(zip(train_folds, test_folds)):
+        print("working on fold " +str(i))
+        train.to_csv(output_path+"fold-" + str(i) +"-train.csv", index=False)
+        test.to_csv(output_path+"fold-" + str(i)+"-test.csv", index=False)
 
-    train_in_cat.to_csv(output_path+"in-cat-train.csv",index=False)
     test_in_cat.to_csv(output_path+"in-cat-test.csv",index=False)
     out_of_cat_data.to_csv(output_path+"out-of-cat-valid.csv",index=False)
 
