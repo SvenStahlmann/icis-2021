@@ -4,12 +4,6 @@ from sklearn.metrics import f1_score, accuracy_score
 from simpletransformers.classification import ClassificationModel
 import click
 
-
-def load_training_data(trainingdata, testdata):
-    train = pd.read_csv(trainingdata, delimiter=',')
-    test = pd.read_csv(testdata, delimiter=',')
-    return train, test
-
 def load_validation_data(valid_in_cat_path,valid_out_of_cat_path):
     valid_in_cat = pd.read_csv(valid_in_cat_path, delimiter=',')
     valid_out_of_cat = pd.read_csv(valid_out_of_cat_path, delimiter=',')
