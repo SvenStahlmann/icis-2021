@@ -1,8 +1,8 @@
-import pandas as pd
 import click
-from sklearn.metrics import f1_score, accuracy_score
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+import pandas as pd
 from sklearn import svm
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.metrics import f1_score, accuracy_score
 
 
 def load_validation_data(valid_in_cat_path, valid_out_of_cat_path):
