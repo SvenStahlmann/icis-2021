@@ -49,7 +49,7 @@ def prediction_svm(train, test, valid, report_df, current_fold, use_tfidf=False)
     acc_valid = accuracy_score(prediction_svm_valid, y_valid) * 100
     f1_test = f1_score(prediction_svm_test, y_test) * 100
     f1_valid = f1_score(prediction_svm_valid, y_valid) * 100
-    report_df.append([name, acc_test, acc_valid, f1_test, f1_valid])
+    report_df.append([name, acc_test, f1_test, acc_valid, f1_valid])
 
 
 @click.command()
