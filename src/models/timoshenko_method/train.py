@@ -1,25 +1,28 @@
 #! /usr/bin/env python
 
-import tensorflow as tf
-import numpy as np
+import datetime
 import os
 import time
-import datetime
+
 import data_helpers
-from text_cnn import TextCNN
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from sklearn.metrics import f1_score
 from tensorflow.contrib import learn
-from sklearn.metrics import f1_score, precision_score, recall_score
+from text_cnn import TextCNN
 
 # Parameters
 # ==================================================
 
 # Data loading params
-tf.flags.DEFINE_string("data_file_train", "../../../data/processed/in-cat-train.csv", "Train data source.")
+tf.flags.DEFINE_string("data_base_path", "../../../data/processed/", "Base data path.")
 tf.flags.DEFINE_string("data_file_test", "../../../data/processed/in-cat-test.csv", "Test data source.")
 tf.flags.DEFINE_string("data_file_valid", "../../../data/processed/out-of-cat-valid.csv", "Validation data source.")
 
 # Pre trained Embedding parameter
-tf.flags.DEFINE_string("embedding_path", "../../../models/w2v-amz.bin", "path to the file containing the pretrained embedding.")
+tf.flags.DEFINE_string("embedding_path", "../../../models/w2v-amz.bin",
+                       "path to the file containing the pretrained embedding.")
 tf.flags.DEFINE_string("embedding_bin", True, "True if the file is in binary format.")
 
 # Model Hyperparameters
@@ -46,17 +49,21 @@ FLAGS = tf.flags.FLAGS
 #     print("{}={}".format(attr.upper(), value))
 # print("")
 
-#global variables
+# global variables
 TEST_SAMPLES = 0
 TEST_CORRECT = 0
 
-def preprocess():
+
+def preprocess(current_fold):
     # Data Preparation
     # ==================================================
 
     # Load data
     print("Loading data...")
-    x_train, x_test, x_valid, y_train, y_test, y_valid = data_helpers.load_all_data_and_labels(FLAGS.data_file_train,FLAGS.data_file_test,FLAGS.data_file_valid)
+    x_train, x_test, x_valid, y_train, y_test, y_valid = data_helpers.load_all_data_and_labels(FLAGS.data_base_path,
+                                                                                               current_fold,
+                                                                                               FLAGS.data_file_test,
+                                                                                               FLAGS.data_file_valid)
 
     # Build vocabulary
     # vll brauchen wir hier train und test
@@ -76,14 +83,15 @@ def preprocess():
     print("Train/Test/Val split: {:d}/{:d}/{:d}".format(len(y_train), len(y_test), len(y_valid)))
     return x_train, x_test, x_valid, y_train, y_test, y_valid, vocab_processor
 
-def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid):
+
+def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, report_df, current_fold):
     # Training
     # ==================================================
 
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(
-          allow_soft_placement=FLAGS.allow_soft_placement,
-          log_device_placement=FLAGS.log_device_placement)
+            allow_soft_placement=FLAGS.allow_soft_placement,
+            log_device_placement=FLAGS.log_device_placement)
         sess = tf.Session(config=session_conf)
         with sess.as_default():
             cnn = TextCNN(
@@ -150,9 +158,10 @@ def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid):
             print("Load word2vec file {}".format(FLAGS.embedding_path))
             initW = data_helpers.load_embedding_vectors_word2vec(vocabulary,
                                                                  FLAGS.embedding_path,
-                                                                  FLAGS.embedding_bin)
+                                                                 FLAGS.embedding_bin)
             print("word2vec file has been loaded")
             sess.run(cnn.W.assign(initW))
+
             ## end of change
 
             def train_step(x_batch, y_batch):
@@ -160,9 +169,9 @@ def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid):
                 A single training step
                 """
                 feed_dict = {
-                  cnn.input_x: x_batch,
-                  cnn.input_y: y_batch,
-                  cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
+                    cnn.input_x: x_batch,
+                    cnn.input_y: y_batch,
+                    cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
                 _, step, summaries, loss, accuracy = sess.run(
                     [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
@@ -176,9 +185,9 @@ def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid):
                 Evaluates model on a dev set
                 """
                 feed_dict = {
-                  cnn.input_x: x_batch,
-                  cnn.input_y: y_batch,
-                  cnn.dropout_keep_prob: 1.0
+                    cnn.input_x: x_batch,
+                    cnn.input_y: y_batch,
+                    cnn.dropout_keep_prob: 1.0
                 }
                 step, summaries, loss, accuracy = sess.run(
                     [global_step, dev_summary_op, cnn.loss, cnn.accuracy],
@@ -188,13 +197,12 @@ def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid):
                 labels = np.array(y_batch)[:, 1]
                 prediction = cnn.predictions.eval(feed_dict)
                 f1 = f1_score(labels, prediction)
-                precision = precision_score(labels, prediction)
-                recall = recall_score(labels, prediction)
 
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, loss {:g}, acc {:g} prec {:g} rec {:g} f1 {:g}".format(time_str, step, loss, accuracy, precision, recall, f1))
+                print("{}: step {}, loss {:g}, acc {:g}  f1 {:g}".format(time_str, step, loss, accuracy, f1))
                 if writer:
                     writer.add_summary(summaries, step)
+                return accuracy, f1
 
             # Generate batches
             batches = data_helpers.batch_iter(
@@ -213,16 +221,34 @@ def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid):
                     print("Saved model checkpoint to {}\n".format(path))
 
             print("\nEnd test evaluation:")
-            dev_step(x_test, y_test, writer=dev_summary_writer)
+            acc_score_in_cat, f1_score_in_cat = dev_step(x_test, y_test, writer=dev_summary_writer)
             print("\nEnd val evaluation:")
-            dev_step(x_valid, y_valid, writer=dev_summary_writer)
-            #print("saving trained model")
-            #save_path = saver.save(sess, "model.ckpt", global_step=current_step)
-            #print("Model saved in path: %s" % save_path)
+            acc_score_out_of_cat, f1_score_out_of_cat = dev_step(x_valid, y_valid, writer=dev_summary_writer)
+
+            name = 'fold-' + str(current_fold)
+            report_df.append([name, acc_score_in_cat, f1_score_in_cat, acc_score_out_of_cat, f1_score_out_of_cat])
+
+            # print("saving trained model")
+            # save_path = saver.save(sess, "model.ckpt", global_step=current_step)
+            # print("Model saved in path: %s" % save_path)
+
 
 def main(argv=None):
-    x_train, x_test, x_valid, y_train, y_test, y_valid, vocab_processor = preprocess()
-    train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid)
+    report_df = []
+    for i in range(10):
+        x_train, x_test, x_valid, y_train, y_test, y_valid, vocab_processor = preprocess(i)
+        train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, report_df, i)
+
+    report_df = pd.DataFrame(report_df, columns=['name', 'acc_in_cat', 'f1_in_cat', 'acc_out_of_cat', 'f1_out_of_cat'])
+
+    print("evaluation in cat")
+    print(f"acc: {report_df['acc_in_cat'].mean()}, f1: {report_df['f1_in_cat'].mean()}")
+
+    print("evaluation out of cat")
+    print(f"acc: {report_df['acc_out_of_cat'].mean()}, f1: {report_df['f1_out_of_cat'].mean()}")
+
+    report_df.to_csv('../../../reports/timoshenko-results.csv', index=False)
+
 
 if __name__ == '__main__':
     tf.app.run()

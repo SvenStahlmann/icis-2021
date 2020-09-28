@@ -1,15 +1,28 @@
 import numpy as np
-import re
 import pandas as pd
 
-def load_all_data_and_labels(train_path, test_path, valid_path):
+
+def load_validation_data(valid_in_cat_path, valid_out_of_cat_path):
+    valid_in_cat = pd.read_csv(valid_in_cat_path, delimiter=',')
+    valid_out_of_cat = pd.read_csv(valid_out_of_cat_path, delimiter=',')
+
+    return valid_in_cat, valid_out_of_cat
+
+
+def load_fold_data(path, current_fold):
+    fold_train = pd.read_csv(path + 'fold-' + str(current_fold) + '-train.csv', delimiter=',')
+    fold_test = pd.read_csv(path + 'fold-' + str(current_fold) + '-test.csv', delimiter=',')
+
+    return fold_train, fold_test
+
+
+def load_all_data_and_labels(base_path, current_fold, test_path, valid_path):
     """
     Loads data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
-    train = pd.read_csv(train_path, delimiter=',')
-    test = pd.read_csv(test_path, delimiter=',')
-    valid = pd.read_csv(valid_path, delimiter=',')
+    train, _ = load_fold_data(base_path, current_fold)
+    test, valid = load_validation_data(test_path, valid_path)
 
     x_train = train['text'].tolist()
     x_train = [s.strip() for s in x_train]
@@ -23,7 +36,8 @@ def load_all_data_and_labels(train_path, test_path, valid_path):
     y_test = np.array([dic_one_hot.get(n, n) for n in test['labels'].tolist()])
     y_valid = np.array([dic_one_hot.get(n, n) for n in valid['labels'].tolist()])
 
-    return x_train,x_test,x_valid,y_train,y_test,y_valid
+    return x_train, x_test, x_valid, y_train, y_test, y_valid
+
 
 def batch_iter(data, batch_size, num_epochs, shuffle=True):
     """
@@ -31,7 +45,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
     """
     data = np.array(data)
     data_size = len(data)
-    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
+    num_batches_per_epoch = int((len(data) - 1) / batch_size) + 1
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
         if shuffle:
