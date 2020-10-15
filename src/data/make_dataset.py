@@ -30,7 +30,9 @@ def load_in_cat_data(in_category_data_path):
     in_cat_data = preprocess_dataframe(in_cat_data)
 
     # split into train in test in category
-    train_in_cat, test_in_cat = train_test_split(in_cat_data, test_size=0.1)
+    train_in_cat, test_in_cat = train_test_split(in_cat_data, test_size=0.1,stratify=in_cat_data[['labels']])
+    print(train_in_cat['labels'].mean())
+    print(test_in_cat['labels'].mean())
     train_folds, test_folds = kfoldize(train_in_cat)
 
     return train_folds,test_folds, test_in_cat
@@ -38,7 +40,7 @@ def load_in_cat_data(in_category_data_path):
 def load_out_of_cat_data(out_category_data_path):
     out_of_cat_data = pd.read_csv(out_category_data_path, index_col=False)
     # drop unused columns from the dataframe
-    out_of_cat_data = out_of_cat_data.filter(['labels', 'text'])
+    out_of_cat_data = out_of_cat_data.filter(['labels', 'text', 'category'])
     #change labels
     out_of_cat_data['labels'] = out_of_cat_data['labels'].replace(['n', 'esc'], 0)
     out_of_cat_data['labels'] = out_of_cat_data['labels'].replace(['y'], 1)
