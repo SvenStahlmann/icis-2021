@@ -36,7 +36,7 @@ def load_all_data_and_labels(base_path, current_fold, test_path, valid_path):
     y_test = np.array([dic_one_hot.get(n, n) for n in test['labels'].tolist()])
     y_valid = np.array([dic_one_hot.get(n, n) for n in valid['labels'].tolist()])
 
-    return x_train, x_test, x_valid, y_train, y_test, y_valid
+    return x_train, x_test, x_valid, y_train, y_test, y_valid , valid
 
 
 def batch_iter(data, batch_size, num_epochs, shuffle=True):

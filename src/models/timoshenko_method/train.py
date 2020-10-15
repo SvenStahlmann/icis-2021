@@ -60,11 +60,10 @@ def preprocess(current_fold):
 
     # Load data
     print("Loading data...")
-    x_train, x_test, x_valid, y_train, y_test, y_valid = data_helpers.load_all_data_and_labels(FLAGS.data_base_path,
+    x_train, x_test, x_valid, y_train, y_test, y_valid, df_valid = data_helpers.load_all_data_and_labels(FLAGS.data_base_path,
                                                                                                current_fold,
                                                                                                FLAGS.data_file_test,
                                                                                                FLAGS.data_file_valid)
-
     # Build vocabulary
     # vll brauchen wir hier train und test
     max_document_length = max([len(x.split(" ")) for x in x_train])
@@ -72,6 +71,12 @@ def preprocess(current_fold):
     x_train = np.array(list(vocab_processor.fit_transform(x_train)))
     x_test = np.array(list(vocab_processor.fit_transform(x_test)))
     x_valid = np.array(list(vocab_processor.fit_transform(x_valid)))
+
+    # for category assessment
+    df_valid['text'] = pd.Series(x_valid.tolist())
+    df_valid['labels'] = pd.Series(y_valid.tolist())
+    print(df_valid['labels'][0])
+    print(type(y_valid))
 
     # Randomly shuffle train data
     np.random.seed(10)
@@ -81,10 +86,10 @@ def preprocess(current_fold):
 
     print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
     print("Train/Test/Val split: {:d}/{:d}/{:d}".format(len(y_train), len(y_test), len(y_valid)))
-    return x_train, x_test, x_valid, y_train, y_test, y_valid, vocab_processor
+    return x_train, x_test, x_valid, y_train, y_test, y_valid, vocab_processor, df_valid
 
 
-def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, report_df, current_fold):
+def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, report_df, current_fold, df_valid):
     # Training
     # ==================================================
 
@@ -225,8 +230,24 @@ def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, r
             print("\nEnd val evaluation:")
             acc_score_out_of_cat, f1_score_out_of_cat = dev_step(x_valid, y_valid, writer=dev_summary_writer)
 
+            cat_dict = {}
+            for category in df_valid.category.unique():
+                mask = df_valid['category'] == category
+                category_df = df_valid[mask]
+                category_array = np.array(category_df['text'].values.tolist())
+                category_label = np.array(category_df['labels'].values.tolist())
+                print(category_array.shape)
+                print(x_valid.shape)
+                print(category_label.shape)
+                print(y_valid.shape)
+                cat_acc, cat_f1 = dev_step(category_array, category_label)
+                cat_dict[category + "-f1"] = cat_f1
+                cat_dict[category + "-acc"] = cat_acc
+
             name = 'fold-' + str(current_fold)
-            report_df.append([name, acc_score_in_cat, f1_score_in_cat, acc_score_out_of_cat, f1_score_out_of_cat])
+            report_df.append([name, acc_score_in_cat, f1_score_in_cat, acc_score_out_of_cat, f1_score_out_of_cat] + list(cat_dict.values()))
+
+            return list(cat_dict.keys())
 
             # print("saving trained model")
             # save_path = saver.save(sess, "model.ckpt", global_step=current_step)
@@ -236,10 +257,10 @@ def train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, r
 def main(argv=None):
     report_df = []
     for i in range(10):
-        x_train, x_test, x_valid, y_train, y_test, y_valid, vocab_processor = preprocess(i)
-        train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, report_df, i)
+        x_train, x_test, x_valid, y_train, y_test, y_valid, vocab_processor, df_valid = preprocess(i)
+        category_columns = train(x_train, y_train, vocab_processor, x_test, y_test, x_valid, y_valid, report_df, i, df_valid)
 
-    report_df = pd.DataFrame(report_df, columns=['name', 'acc_in_cat', 'f1_in_cat', 'acc_out_of_cat', 'f1_out_of_cat'])
+    report_df = pd.DataFrame(report_df, columns=['name', 'acc_in_cat', 'f1_in_cat', 'acc_out_of_cat', 'f1_out_of_cat'] + category_columns)
 
     print("evaluation in cat")
     print(f"acc: {report_df['acc_in_cat'].mean()}, f1: {report_df['f1_in_cat'].mean()}")
