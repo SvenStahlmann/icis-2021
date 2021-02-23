@@ -1,7 +1,7 @@
-ECIS-2021
+ICIS-2021
 ==============================
 
-Code for the 2021 ECIS Paper Deep Learning Enabled Consumer Research
+Code for the 2021 ICIS Paper
 
 Project Organization
 ------------
