@@ -6,8 +6,35 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+import pandas as pd
 
 
+use_cuda = True
+
+def load_df(fpath):
+    df = pd.read_csv(fpath, delimiter=';')
+    df['sentece'] = df['sentece'].str.split()
+    df = df[["sentece", "need"]]
+    print(df.head())
+
+    df = df[df.need.apply(lambda x: (str)(x).isnumeric())]
+    print(df.head())
+    df['need'] = df['need'].astype(int)
+
+    return df
+
+df = load_df('../../data/raw/amazon-reviews4.csv')
+
+max_sentence_len = (df['sentece'].str.len()).max()
+
+records = df.to_records(index=False)
+data = list(records)
+print(data[:5])
+
+print('sentence maxlen', max_sentence_len)
+
+
+''' old code
 def load_data(fpath, label):
     data = []
     with codecs.open(fpath, 'r', 'utf-8', errors='ignore') as f:
@@ -20,11 +47,7 @@ def load_data(fpath, label):
 pos = load_data('./dataset/rt-polaritydata/rt-polarity.pos', 1)
 neg = load_data('./dataset/rt-polaritydata/rt-polarity.neg', 0)
 data = pos + neg
-
-
-
-max_sentence_len = max([len(sentence) for sentence, _ in data])
-print('sentence maxlen', max_sentence_len)
+'''
 
 vocab = []
 for d, _ in data:
@@ -71,7 +94,8 @@ class Net(nn.Module):
         x = torch.cat(x, 1)  # (N, Cout*len(filter_heights))
         x = self.dropout(x)
         x = self.fc1(x)
-        probs = F.sigmoid(x)
+        #probs = F.sigmoid(x)
+        probs = torch.sigmoid(x)
         return probs
 
 
@@ -104,7 +128,9 @@ def train(model, data, batch_size, n_epoch):
             loss.backward()
             optimizer.step()
 
-            epoch_loss += loss.data[0]
+            #epoch_loss += loss.data[0]
+            epoch_loss += loss.item()
+
         print('epoch: {:d}, loss: {:.3f}'.format(epoch, epoch_loss))
         losses.append(epoch_loss)
     print('Training avg loss: {:.3f}'.format(sum(losses) / len(losses)))
