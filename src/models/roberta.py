@@ -2,6 +2,8 @@ import click
 import pandas as pd
 from simpletransformers.classification import ClassificationModel
 from sklearn.metrics import f1_score, accuracy_score
+from sklearn.model_selection import train_test_split
+from data_helpers import *
 
 DEFAULT_ARGS = {'output_dir': '../../models/roberta-base-bs8-e6',
                  'use_cached_eval_features': False,
@@ -18,10 +20,24 @@ def train(train_df: pd.DataFrame, args = DEFAULT_ARGS):
 
     return model
 
-def predict(df: pd.DataFrame, model, metric):
-    result, model_outputs, wrong_predictions = model.eval_model(df)
-    # todo check what result is
-    return result
+def predict(list, model):
+    prediction, raw_outputs = model.predict(list)
+    return prediction
+
+@click.command()
+@click.option('--datapath', default='../../data/processed/labels.csv', help='path to the labels.')
+def main2(datapath):
+    df = load_labels(datapath)
+
+    categories = df.category.unique()
+    training_cat, testing_cat = train_test_split(categories, test_size=0.5)
+    train_df, test_df = split_dataframe_on_categories(df,training_cat)
+
+    model = train(train_df)
+    pred = predict(test_df['sentece'].tolist(), model)
+
+    f1 = f1_score(test_df['need'].tolist(),pred)
+    print(f1)
 
 
 def load_validation_data(valid_in_cat_path, valid_out_of_cat_path):
@@ -97,4 +113,4 @@ def main(path, valid_in_cat_path, valid_out_of_cat_path):
 
 
 if __name__ == '__main__':
-    main()
+    main2()

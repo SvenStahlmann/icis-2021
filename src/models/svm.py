@@ -17,8 +17,8 @@ def train(train_df: pd.DataFrame, mode: str ='tf-idf'):
     else:
         vectorizer = CountVectorizer(max_features=2000)
 
-    x = train_df['text']
-    y = train_df['labels']
+    x = train_df['sentece']
+    y = train_df['need']
     vectorizer.fit(x)
     # turn text into bag of words / tf-idf vector
     x = vectorizer.transform(x)
@@ -28,9 +28,9 @@ def train(train_df: pd.DataFrame, mode: str ='tf-idf'):
 
     return model, vectorizer
 
-def predict(df: pd.DataFrame,model: svm.SVC, vectorizer, metric):
-    x = df['text']
-    y = df['labels']
+def predict(df: pd.DataFrame,model: svm.SVC, vectorizer):
+    x = df['sentece']
+    y = df['need']
     # turn text into bag of words / tf-idf vector
     x = vectorizer.transform(x)
     prediction = model.predict(x)
