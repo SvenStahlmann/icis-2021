@@ -1,8 +1,10 @@
 import pandas as pd
+from sklearn.model_selection import train_test_split
 
-def select_columns(df1):
-    df1['need']= df1['need'].replace({'y': '1', 'n': '0', 'X': 'x', '2': 'x'})
-    return df1[["sentece", "need","category"]]
+def select_columns(df):
+    df['need']= df['need'].replace({'y': '1', 'n': '0', 'X': 'x', '2': 'x'})
+    df = df.rename(columns={"sentece": "text", "need": "labels"})
+    return df[["text", "labels","category"]]
 
 def create_labels():
     # load dataframes
@@ -13,13 +15,24 @@ def create_labels():
     # concatenate the different dataframes to create the whole labelled data
     df_processed = df.iloc[0:5000].append(df_5000_6200.iloc[0:1000]).append(df_6000_7200.iloc[0:999]).append(df_7000_8000)
 
-    print(df_processed['need'].value_counts())
+    print(df_processed['labels'].value_counts())
     print(len(df_processed))
 
     df_processed.to_csv('../../data/processed/labels.csv', index=False)
 
+def create_in_cat_labels():
+    # load dataframes
+    df = pd.read_csv('../../data/raw/needs-kindersitz-labeled.csv', names=['text','rating','title','purchase','id','id2','labels'])
+    df['labels'] = df['labels'].replace({'y': '1', 'n': '0', 'X': 'x', '2': 'x', 'esc': 'x'})
+    df = df[["text", "labels"]]
+    train_df, test_df = train_test_split(df, train_size=0.8)
+
+    train_df.to_csv('../../data/processed/baby-train-labels.csv', index=False)
+    test_df.to_csv('../../data/processed/baby-test-labels.csv', index=False)
+
 
 if __name__ == '__main__':
+    create_in_cat_labels()
     create_labels()
 
 

@@ -17,7 +17,7 @@ print(df_6000_7200.head())
 sep = ';'
 
 df_5000_6200.to_csv('../../data/raw/df_5000_6200-semicolon.csv', index=False, sep = ';')
-df_5000_6200.to_csv('../../data/raw/df_5000_6200-comma-RG-Tags.csv', index=False)
+df_5000_6200.to_csv('../../data/raw/df_5000_6200-comma.csv', index=False)
 
 df_6000_7200.to_csv('../../data/raw/df_6000_7200-semicolon.csv', index=False, sep = ';')
 df_6000_7200.to_csv('../../data/raw/df_6000_7200-comma.csv', index=False)
