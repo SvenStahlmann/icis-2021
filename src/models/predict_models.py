@@ -35,7 +35,6 @@ def eval_SVM(train_df, test_df):
     f1 = f1_score(test_labels, svm_pred)
     return f1
 
-
 @click.command()
 @click.option('--datapath', default='../../data/processed/labels.csv', help='path to the labels.')
 def eval(datapath):
@@ -58,25 +57,36 @@ def eval(datapath):
     # train text-cnn
     cnn_f1_1 = eval_text_cnn(train_df, df_in_cat_test)
     cnn_f1_2 = eval_text_cnn(df_in_cat_train, df_in_cat_test)
+    cnn_f1_3 = eval_text_cnn(df, df_in_cat_test)
     print(cnn_f1_1)
     print(cnn_f1_2)
+    print(cnn_f1_3)
 
     #train svm
     svm_f1_1  =eval_SVM(train_df, df_in_cat_test)
     svm_f1_2  =eval_SVM(df_in_cat_train, df_in_cat_test)
+    svm_f1_3  =eval_SVM(df, df_in_cat_test)
     print(svm_f1_1)
     print(svm_f1_2)
+    print(svm_f1_3)
 
     print("---results cnn---")
     print(cnn_f1_1)
     print(cnn_f1_2)
+    print(cnn_f1_3)
     print("---results svm---")
     print(svm_f1_1)
     print(svm_f1_2)
+    print(svm_f1_3)
     print("---results roberta---")
     print(roberta_f1_1)
     print(roberta_f1_2)
     print(roberta_f1_3)
+
+    results = {'name': ['roberta-1', 'roberta-2','roberta-3', 'svm-1', 'svm-2', 'svm-3','cnn-1', 'cnn-2', 'cnn-3'], 'f1-score': [roberta_f1_1, roberta_f1_2, roberta_f1_3, svm_f1_1, svm_f1_2, svm_f1_3, cnn_f1_1, cnn_f1_2, cnn_f1_3]}
+
+    df_results = pd.DataFrame(data=results)
+    df_results.to_csv('../../reports/results.csv', index=False)
 
 if __name__ == '__main__':
     eval()
