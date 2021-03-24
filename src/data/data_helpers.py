@@ -26,7 +26,7 @@ def create_in_cat_labels():
     df['labels'] = df['labels'].replace({'y': '1', 'n': '0', 'X': 'x', '2': 'x', 'esc': 'x'})
     df = df[["text", "labels"]]
     train_df, test_df = train_test_split(df, train_size=0.8)
-
+    df.to_csv('../../data/processed/baby-labels.csv', index=False)
     train_df.to_csv('../../data/processed/baby-train-labels.csv', index=False)
     test_df.to_csv('../../data/processed/baby-test-labels.csv', index=False)
 

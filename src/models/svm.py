@@ -1,11 +1,8 @@
-import click
 import pandas as pd
 from sklearn import svm
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from sklearn.metrics import f1_score, accuracy_score
 
-
-def train(train_df: pd.DataFrame, mode: str ='tf-idf'):
+def train(train_df: pd.DataFrame, mode: str ='tf-idf', stop_words = None):
     '''
     Trains a bag of words or tf-idf based SVM on the provided training dataframe
     :param train_df: pandas dataframe with column 'text' and 'label'
@@ -13,9 +10,9 @@ def train(train_df: pd.DataFrame, mode: str ='tf-idf'):
     :return: returns the trained model an the used vectorizer
     '''
     if mode=='tf-idf':
-        vectorizer = TfidfVectorizer(max_features=2000)
+        vectorizer = TfidfVectorizer(max_features=2000, stop_words=stop_words)
     else:
-        vectorizer = CountVectorizer(max_features=2000)
+        vectorizer = CountVectorizer(max_features=2000, stop_words=stop_words)
 
     x = train_df['text']
     y = train_df['labels']
