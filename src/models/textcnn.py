@@ -72,7 +72,7 @@ class Net(nn.Module):
 def train(data, max_sentence_len, w2i, vocab_size, batch_size = 64, n_epoch = 50, use_cuda = True):
     out_ch = 100
     embd_size = 128
-    filter = [1,2,3]
+    filter = [3,3,3,4,4,4,5,5,5]
     model = Net(vocab_size, embd_size, out_ch, filter)
 
     model.train()  # Sets the module in training mode. This has any effect only on modules such as Dropout or BatchNorm.
