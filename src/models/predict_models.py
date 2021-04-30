@@ -86,36 +86,81 @@ def eval(train_df_small, train_df_big ,df_in_cat_train, df_in_cat_test):
     return result_dict
 
 
-def main():
-    number_of_folds = 3
+def eval_out_of_cat(df_heterogeneous ,df_homogeneous, categories):
+    df_results = None
+    for category in categories:
+        print(category)
+        test, train_heterogeneous_big = split_dataframe_on_categories(df_heterogeneous,[category])
+        train_heterogeneous_small, _ = train_test_split(train_heterogeneous_big, train_size=len(df_homogeneous),
+                                                        stratify=train_heterogeneous_big[['category']])
+        result_dict = {'category': category}
+        # train svm
+        result_dict['svm_f1_1'] = eval_SVM(train_heterogeneous_small, test)
+        result_dict['svm_f1_2'] = eval_SVM(df_homogeneous, test)
+        result_dict['svm_f1_3'] = eval_SVM(train_heterogeneous_big, test)
 
-    df = load_labels('../../data/processed/labels.csv')
-    df = remove_row_based_on_category(df,'Baby')
-    df_in_cat = load_labels('../../data/processed/baby-labels.csv')
-    df_small, _ = train_test_split(df, train_size=1800, stratify=df[['category']])
+        # train naive bayes
+        result_dict['nb_f1_1'] = eval_NB(train_heterogeneous_small, test)
+        result_dict['nb_f1_2'] = eval_NB(df_homogeneous, test)
+        result_dict['nb_f1_3'] = eval_NB(train_heterogeneous_big, test)
+
+        # train text-cnn
+        result_dict['cnn_f1_1'] = eval_text_cnn(train_heterogeneous_small, test)
+        result_dict['cnn_f1_2'] = eval_text_cnn(df_homogeneous, test)
+        result_dict['cnn_f1_3'] = eval_text_cnn(train_heterogeneous_big, test)
+
+        # train roberta model
+        result_dict['roberta_f1_1'] = eval_roberta(train_heterogeneous_small, test)
+        result_dict['roberta_f1_2'] = eval_roberta(df_homogeneous, test)
+        result_dict['roberta_f1_3'] = eval_roberta(train_heterogeneous_big, test)
+
+        if df_results is None:
+            #create dataframe
+            df_results = pd.DataFrame(data=[result_dict])
+        else:
+            df_results = df_results.append(result_dict, ignore_index=True)
+            
+        df_results.to_csv('../../reports/results-out-of-training.csv', index=False)
+
+    df_results.to_csv('../../reports/results-out-of-training.csv', index=False)
+
+def main():
+    # eval when predictiing the baby category
+    number_of_folds = 5
+
+    df_heterogeneous = load_labels('../../data/processed/labels.csv')
+    df_homogeneous = load_labels('../../data/processed/baby-labels.csv')
 
     kf = KFold(n_splits=number_of_folds, shuffle=True, random_state=2)
-    df_in_cat_splits = list(kf.split(df_in_cat))
-
+    df_homogeneous_splits = list(kf.split(df_homogeneous))
 
     for i in range(number_of_folds):
         print("Run: " + str(i))
 
-        df_in_cat_train = df_in_cat.iloc[df_in_cat_splits[i][0]]
-        df_in_cat_test = df_in_cat.iloc[df_in_cat_splits[i][1]]
+        df_homogeneous_train = df_homogeneous.iloc[df_homogeneous_splits[i][0]]
+        df_homogeneous_test = df_homogeneous.iloc[df_homogeneous_splits[i][1]]
 
-        run_results = eval(df_small,df,df_in_cat_train,df_in_cat_test)
+        df_heterogeneous_small, _ = train_test_split(df_heterogeneous, train_size=len(df_homogeneous_train),
+                                                     stratify=df_heterogeneous[['category']])
+
+        run_results = eval(df_heterogeneous_small,df_heterogeneous,df_homogeneous_train,df_homogeneous_test)
         if i == 0:
             #create dataframe
             df_results = pd.DataFrame(data=[run_results])
         else:
             df_results = df_results.append(run_results, ignore_index=True)
+
         print("End Run: " + str(i))
 
     print(df_results)
     print('---mean---')
     print(df_results.mean())
-    df_results.to_csv('../../reports/results-5-cv.csv', index=False)
+    df_results.to_csv('../../reports/results-5-cv-in-training.csv', index=False)
 
 if __name__ == '__main__':
     main()
+    #df_heterogeneous = load_labels('../../data/processed/labels.csv')
+    #df_homogeneous = load_labels('../../data/processed/baby-labels.csv')
+    #categories = list(df_heterogeneous['category'].unique())
+    #categories.remove('Baby')
+    #eval_out_of_cat(df_heterogeneous,df_homogeneous,categories)
